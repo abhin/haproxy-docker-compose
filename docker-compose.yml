@@ -1,0 +1,48 @@
+version: "3.9"
+
+services:
+  haproxy:
+    image: haproxy:2.9-alpine
+    container_name: haproxy
+    ports:
+      - "8080:80"     # HTTP front
+      - "8404:8404"   # HAProxy stats
+    volumes:
+      - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    depends_on:
+      - whoami1
+      - whoami2
+      - web
+    healthcheck:
+      test: ["CMD-SHELL", "haproxy -c -f /usr/local/etc/haproxy/haproxy.cfg"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - appnet
+
+  whoami1:
+    image: traefik/whoami:latest
+    container_name: whoami1
+    hostname: api1
+    networks:
+      - appnet
+
+  whoami2:
+    image: traefik/whoami:latest
+    container_name: whoami2
+    hostname: api2
+    networks:
+      - appnet
+
+  web:
+    image: nginx:alpine
+    container_name: web
+    volumes:
+      - ./web/index.html:/usr/share/nginx/html/index.html:ro
+    networks:
+      - appnet
+
+networks:
+  appnet:
+    driver: bridge
